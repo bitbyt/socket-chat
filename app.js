@@ -1,17 +1,35 @@
-var app = require('express')();
-var http = require('http').Server(app);
-var io = require('socket.io')(http);
+var express = require('express'),
+    app     = new express(),
+    server  = require('http').createServer(app),
+    io      = require('socket.io').listen(server);
 
-app.get('/', function(req, res) {
-  res.sendFile(__dirname + '/index.html');
+app.use(express.static(__dirname + '/public'));
+app.use('/scripts', express.static(__dirname + '/node_modules/socket.io/node_modules/socket.io.client'));
+
+app.set('port', (process.env.PORT || 8080));
+
+server.listen(app.get('port'), function() {
+  console.log('Server running at localhost', app.get('port'))
 });
 
+//socket on funciton
 io.on('connection', function(socket){
-  socket.on('chat message', function(msg){
-    io.emit('chat message', msg);
-  });
-});
 
-http.listen(3000, function() {
-  console.log('server listening on localhost:3000');
-})
+  //listens when client emits 'chat message'
+  socket.on('chat message', function(data){
+    //execute 'chat message'
+    socket.broadcast.emit('chat message', {
+      username: socket.username,
+      message: data
+    });
+  });
+
+  //when new user logs in
+  socket.on('new user', function(username){
+
+    //store username in socket session
+    socket.username = username;
+  })
+
+  //when a user logs out
+});
